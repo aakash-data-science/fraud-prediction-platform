@@ -19,7 +19,7 @@ env/
 logs/*.log
 
 # Database
-database/*.db
+#database/*.db
 
 # Model Cache
 .pytest_cache/
