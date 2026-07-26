@@ -416,7 +416,13 @@ elif page == "Prediction History":
 
         with st.spinner("Loading prediction history..."):
 
-            conn = sqlite3.connect("database/fraud_detection.db")
+            db_path = "database/fraud_detection.db"
+
+            if not os.path.exists(db_path):
+                st.info("No prediction history available yet.")
+                st.stop()
+
+            conn = sqlite3.connect(db_path)
 
             cursor = conn.cursor()
 
