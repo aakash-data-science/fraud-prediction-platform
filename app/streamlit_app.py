@@ -8,6 +8,10 @@ import streamlit as st
 
 import requests
 
+import sqlite3
+
+import joblib
+
 import pandas as pd
 
 import matplotlib.pyplot as plt
@@ -36,6 +40,9 @@ st.set_page_config(
 # ============================================================
 
 MODELS_DIR = "models"
+
+model = joblib.load(os.path.join(MODELS_DIR, "fraud_detection_model.joblib"))
+preprocessor = joblib.load(os.path.join(MODELS_DIR, "preprocessor.joblib"))
 
 try:
 
@@ -351,20 +358,21 @@ if page == "Prediction":
 
             with st.spinner("Analyzing transaction..."):
 
-                response = requests.post(
-                "http://127.0.0.1:8000/predict",
-                json=transaction_data,
-                timeout=10
-                )
+                input_df = pd.DataFrame([transaction_data])
 
-                response.raise_for_status()
+                processed_data = preprocessor.transform(input_df)
 
-                result = response.json()
+                prediction_value = model.predict(processed_data)[0]
 
-            prediction = result["Prediction"]
-            probability = result["Fraud Probability"] * 100
+                probability = model.predict_proba(processed_data)[0][1]
 
-            st.divider()
+                prediction = "Fraud" if prediction_value == 1 else "Legitimate"
+
+                probability *= 100
+
+               
+
+                st.divider()
 
             if prediction == "Fraud":
 
@@ -408,14 +416,19 @@ elif page == "Prediction History":
 
         with st.spinner("Loading prediction history..."):
 
-            response = requests.get(
-                "http://127.0.0.1:8000/predictions",
-                timeout=10
-            )
+            conn = sqlite3.connect("database/fraud_detection.db")
 
-            response.raise_for_status()
+            cursor = conn.cursor()
 
-            history = response.json()
+            cursor.execute("""
+                SELECT *
+                FROM fraud_predictions
+                ORDER BY id DESC
+            """)
+
+            history = cursor.fetchall()
+
+            conn.close()
 
         if len(history) == 0:
 
